@@ -43,8 +43,7 @@ namespace MinorShift.Emuera.GameProc
 			labelDic.Initialized = false;
 			List<KeyValuePair<string, string>> erbFiles = Config.GetFiles(erbDir, "*.ERB");
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-            // 按路径去重：Android 共享存储不区分大小写，AddRange 会重复加载同一批 ERB。
-            Config.AppendFilesUnique(erbFiles, erbDir, "*.erb");
+            erbFiles.AddRange(Config.GetFiles(erbDir, "*.erb"));
 #endif
             List<string> isOnlyEvent = new List<string>();
             noError = true;

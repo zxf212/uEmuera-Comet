@@ -349,39 +349,6 @@ namespace MinorShift.Emuera
 			return getFiles(rootdir, rootdir, pattern, !SearchSubdirectory, SortWithFilename);
 		}
 
-		/// <summary>
-		/// 追加 rootdir 下匹配 pattern 的文件，按完整路径去重（忽略大小写）。
-		/// Android 的共享存储（/storage/emulated/0，FUSE/sdcardfs）不区分大小写，
-		/// 为了兼容扩展名大小写差异而做的第二次扫描会命中同一批文件，
-		/// 导致同一个 ERB/ERH/CSV 被重复加载。
-		/// ERH 重复加载时第二次的 #DEFINE 会撞上第一次注册的宏名（Lv2），
-		/// 进而把 HeaderFileLoader.noError 置 false 并中止整个 ERH 加载。
-		/// </summary>
-		public static void AppendFilesUnique(List<KeyValuePair<string, string>> list, string rootdir, string pattern)
-		{
-			HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-			for (int i = 0; i < list.Count; i++)
-				seen.Add(list[i].Value);
-			List<KeyValuePair<string, string>> add = GetFiles(rootdir, pattern);
-			for (int i = 0; i < add.Count; i++)
-				if (seen.Add(add[i].Value))
-					list.Add(add[i]);
-		}
-
-		/// <summary>
-		/// 同上，用于纯路径列表（AppContents 的资源 CSV 枚举）。
-		/// </summary>
-		public static void AppendPathsUnique(List<string> list, string dir, string pattern)
-		{
-			HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-			for (int i = 0; i < list.Count; i++)
-				seen.Add(list[i]);
-			string[] add = Directory.GetFiles(dir, pattern, SearchOption.TopDirectoryOnly);
-			for (int i = 0; i < add.Length; i++)
-				if (seen.Add(add[i]))
-					list.Add(add[i]);
-		}
-
 		private sealed class StrIgnoreCaseComparer : IComparer<string>
 		{
 			public int Compare(string x, string y)

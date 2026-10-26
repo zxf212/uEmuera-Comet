@@ -133,8 +133,7 @@ namespace MinorShift.Emuera
                     {
                         List<KeyValuePair<string, string>> fnames = Config.GetFiles(args[i] + "\\", "*.ERB");
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-                        // 按路径去重（Android 共享存储不区分大小写，避免同一批 ERB 重复入列）
-                        Config.AppendFilesUnique(fnames, args[i] + "\\", "*.erb");
+                        fnames.AddRange(Config.GetFiles(args[i] + "\\", "*.erb"));
 #endif
                         for(int j = 0; j < fnames.Count; j++)
                         {

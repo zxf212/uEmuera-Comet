@@ -91,11 +91,9 @@ namespace MinorShift.Emuera.Content
 				foreach (var sub in Directory.GetDirectories(Program.ContentDir))
 					csvFiles.AddRange(Directory.GetFiles(sub, "*.csv", SearchOption.TopDirectoryOnly));
 #if(UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-                // 按路径去重：Android 共享存储不区分大小写，直接 AddRange 会把同一批资源 CSV
-                // 再加载一次，产生大量「同名のリソースがすでに作成されています」警告。
-                Config.AppendPathsUnique(csvFiles, Program.ContentDir, "*.CSV");
+                csvFiles.AddRange(Directory.GetFiles(Program.ContentDir, "*.CSV", SearchOption.TopDirectoryOnly));
 				foreach (var sub in Directory.GetDirectories(Program.ContentDir))
-					Config.AppendPathsUnique(csvFiles, sub, "*.CSV");
+					csvFiles.AddRange(Directory.GetFiles(sub, "*.CSV", SearchOption.TopDirectoryOnly));
 #endif
 				int failedCount = 0;
                 var count = csvFiles.Count;

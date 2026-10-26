@@ -1009,15 +1009,19 @@ check1break:
 			if (!Directory.Exists(csvDir))
 				return;
 			List<KeyValuePair<string, string>> csvPaths = Config.GetFiles(csvDir, "CHARA*.CSV");
-#if(UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-            // 合并大小写不同的三种写法，按路径去重后再统一加载。
-            // Android 共享存储不区分大小写，原来的逐个 AddRange + 逐个加载会让同一批角色 CSV 加载 4 次。
-            Config.AppendFilesUnique(csvPaths, csvDir, "Chara*.CSV");
-            Config.AppendFilesUnique(csvPaths, csvDir, "CHARA*.csv");
-            Config.AppendFilesUnique(csvPaths, csvDir, "Chara*.csv");
-#endif
 			for (int i = 0; i < csvPaths.Count; i++)
 				loadCharacterDataFile(csvPaths[i].Value, csvPaths[i].Key, disp);
+#if(UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+            csvPaths = Config.GetFiles(csvDir, "Chara*.CSV");
+            for(int i = 0; i < csvPaths.Count; i++)
+                loadCharacterDataFile(csvPaths[i].Value, csvPaths[i].Key, disp);
+            csvPaths = Config.GetFiles(csvDir, "CHARA*.csv");
+            for(int i = 0; i < csvPaths.Count; i++)
+                loadCharacterDataFile(csvPaths[i].Value, csvPaths[i].Key, disp);
+            csvPaths = Config.GetFiles(csvDir, "Chara*.csv");
+            for(int i = 0; i < csvPaths.Count; i++)
+                loadCharacterDataFile(csvPaths[i].Value, csvPaths[i].Key, disp);
+#endif
             SortCharacterTmplList();
 
             var count = CharacterTmplList.Count;
