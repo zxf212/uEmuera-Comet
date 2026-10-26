@@ -4255,6 +4255,9 @@ namespace MinorShift.Emuera.GameData.Function
 				try
 				{
 					Config.CreateSavDir();
+					// v24 是 GDI+ 立即绘制，GSAVE 永远存出最新内容；本实现画在 CPU 缓冲里，
+					// 必须先上传到 Texture2D（原地 SetPixels32，TextureInfo 里是同一引用）。
+					g.ApplyPixelBuffer();
 					g.Bitmap.Save(filepath);
 				}
 				catch
