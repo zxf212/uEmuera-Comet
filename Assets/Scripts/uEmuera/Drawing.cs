@@ -54,12 +54,16 @@ namespace uEmuera.Drawing
             textureinfo = SpriteManager.GetTextureInfo(filename, path);
             if(textureinfo == null)
             {
-                Debug.LogWarning($"[BitmapTexture] GetTextureInfo failed: {path}");
+                Debug.LogWarning($"[LoadContents][BitmapTexture] GetTextureInfo failed: {path}");
                 return;
             }
-            size.Width = textureinfo.texture.width;
-            size.Height = textureinfo.texture.height;
-            Debug.Log($"[BitmapTexture] loaded: {path} {size.Width}x{size.Height}");
+            // 本构造函数运行在 Emuera 的后台线程（LoadContents 调用链）上。
+            // texture.width/height 的 getter 最终是 Unity 的 GetDataWidth/GetDataHeight，
+            // 带主线程检查，在 worker 上会抛 "can only be called from the main thread"，
+            // 导致整个资源 CSV 加载失败。这里改读 TextureInfo 在主线程构造时缓存下来的 _w/_h。
+            size.Width = textureinfo.width;
+            size.Height = textureinfo.height;
+            Debug.Log($"[LoadContents][BitmapTexture] loaded: {path} {size.Width}x{size.Height} (cached)");
         }
         public UnityEngine.Texture2D texture
         {
