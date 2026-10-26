@@ -149,6 +149,11 @@ public class EmueraContent : MonoBehaviour
 
     public void Update()
     {
+        // GXX 画布：把本帧被 GCLEAR/GSETCOLOR/GDRAWSPRITE/GDRAWG 改脏的 pixelBuffer
+        // 上传到对应的 Texture2D，保证下面的重建/显示拿到的是最新像素。
+        // 放在 Update 开头而不是 dirty 分支内：该分支带 early-return，并非每帧进入。
+        MinorShift.Emuera.Content.GraphicsImage.FlushDirtyGraphics();
+
         if(!dirty && drag_delta == Vector2.zero)
             return;
         dirty = false;
