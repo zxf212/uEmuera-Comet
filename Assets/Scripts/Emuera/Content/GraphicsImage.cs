@@ -69,6 +69,9 @@ namespace MinorShift.Emuera.Content
             width = x;
             height = y;
             pixelBuffer = new Color32[x * y];
+            // 置脏：v24 里 GCREATE 之后画布就是一张有效的空图；本实现若初始不脏，
+            // ApplyPixelBuffer 不会执行 → Bitmap 为 null → SPRITECREATE 解析失败。
+            pixelDirty = true;
         }
 
         public void ApplyPixelBuffer()
