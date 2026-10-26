@@ -35,7 +35,9 @@ namespace MinorShift.Emuera.GameProc
 		{
 			List<KeyValuePair<string, string>> headerFiles = Config.GetFiles(headerDir, "*.ERH");
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-            headerFiles.AddRange(Config.GetFiles(headerDir, "*.erh"));
+            // 按路径去重后再追加。Android 共享存储不区分大小写，直接 AddRange 会把同一批 .ERH
+            // 再加载一次，第二次的 #DEFINE 撞上第一次注册的宏名（Lv2）→ 整个 ERH 加载中止。
+            Config.AppendFilesUnique(headerFiles, headerDir, "*.erh");
 #endif
             bool noError = true;
 			dimlines = new Queue<DimLineWC>();
