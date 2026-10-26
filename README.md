@@ -8,11 +8,25 @@
 
 原版在部分设备或游戏脚本下，存在图片渲染错误/显示异常问题。本版本针对该图文渲染逻辑进行了有限修复，旨在提升可用性。
 
+## 改动清单（已实现）
+
+1. **GXX 全指令软件光栅化**：`GCREATE` / `GCLEAR` / `GFILLRECTANGLE` / `GDRAWSPRITE` / `GDRAWG` / `GDRAWGWITHMASK` / `GSETCOLOR` / `GGETCOLOR` 由原版的空实现改为基于 CPU 端 `Color32` 缓冲实现，通过 `ApplyPixelBuffer()` 上传到 `Texture2D`。
+2. **线程化纹理加载**：新增主线程调度（`IsMainThread` / `RunOnMainThread` / `ProcessMainThreadActions`），异步加载的同步原语由 `Mutex` 改为 `ManualResetEvent`。
+3. **WebP 直接解码为像素**：新增 `DecodeWebPToPixels`，并提供可读纹理副本（`MakeReadable`）。
+4. **BitmapPixelBuffer 直挂寻址**：`GCREATE` 产生的画布不再走文件名查找，直接以 `:GRAPHICS:{ID}` 注册进纹理字典。
+5. **按钮位图像素缓存**：新增 `CacheButtonMapPixels` / `GetButtonMapPixel`，CBG 点击判定不再逐像素回读 GPU。
+
+## 未实现清单（如实标注）
+
+1. **颜色矩阵参数（cm）被忽略**：`GDRAWSPRITE` / `GDRAWG` 的第 11 个参数（`float[][] cm`）接收后丢弃，效果等同不传。
+2. **缩放为最近邻**：上游 Emuera v24 使用 GDI+ 双三次插值，本实现为最近邻采样，放大时可见锯齿。
+3. **`UnityDrawContext` 绘制后端为实验性、未接线**：`Assets/Scripts/Emuera/Content/UnityDrawContext.cs` 已实现 `IDrawContext`，但当前无任何调用方。
+
 ## 原作者与授权状态
 
-· 
+· 本项目基于 **xerysherry/uEmuera v0.2.9d**（Apache-2.0 协议）修改，其上游为 emuera1824v15 源码。原作者：xerysherry；Emuera 解释器作者：MinorShift 等。
 
-· 截至目前，我尚未获得原作者的正式修改与分发授权。
+· 授权说明：Apache-2.0 已授予修改与再分发权利，无需另行取得作者授权；Emuera 原版授权（见 `Assets/StreamingAssets/license@emuera`）要求：不得虚示来源、修改必须明示、不得删除声明。本版本按此三项执行，未删除或改动任何原授权文件。
 
 · 若原作者或相关权利人认为此版本不妥，请联系我，我会立即处理。
 
