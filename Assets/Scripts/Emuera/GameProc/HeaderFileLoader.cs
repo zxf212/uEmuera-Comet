@@ -34,10 +34,7 @@ namespace MinorShift.Emuera.GameProc
 		public bool LoadHeaderFiles(string headerDir, bool displayReport)
 		{
 			List<KeyValuePair<string, string>> headerFiles = Config.GetFiles(headerDir, "*.ERH");
-#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-            headerFiles.AddRange(Config.GetFiles(headerDir, "*.erh"));
-#endif
-            bool noError = true;
+			bool noError = true;
 			dimlines = new Queue<DimLineWC>();
 			try
 			{

@@ -132,9 +132,6 @@ namespace MinorShift.Emuera
                     if ((File.GetAttributes(args[i]) & FileAttributes.Directory) == FileAttributes.Directory)
                     {
                         List<KeyValuePair<string, string>> fnames = Config.GetFiles(args[i] + "\\", "*.ERB");
-#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-                        fnames.AddRange(Config.GetFiles(args[i] + "\\", "*.erb"));
-#endif
                         for(int j = 0; j < fnames.Count; j++)
                         {
                             AnalysisFiles.Add(fnames[j].Value);

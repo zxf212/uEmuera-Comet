@@ -90,11 +90,6 @@ namespace MinorShift.Emuera.Content
 				List<string> csvFiles = new List<string>(Directory.GetFiles(Program.ContentDir, "*.csv", SearchOption.TopDirectoryOnly));
 				foreach (var sub in Directory.GetDirectories(Program.ContentDir))
 					csvFiles.AddRange(Directory.GetFiles(sub, "*.csv", SearchOption.TopDirectoryOnly));
-#if(UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-                csvFiles.AddRange(Directory.GetFiles(Program.ContentDir, "*.CSV", SearchOption.TopDirectoryOnly));
-				foreach (var sub in Directory.GetDirectories(Program.ContentDir))
-					csvFiles.AddRange(Directory.GetFiles(sub, "*.CSV", SearchOption.TopDirectoryOnly));
-#endif
 				int failedCount = 0;
                 var count = csvFiles.Count;
                 for(var i=0; i<count; ++i)

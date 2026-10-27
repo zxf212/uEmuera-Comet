@@ -1011,17 +1011,6 @@ check1break:
 			List<KeyValuePair<string, string>> csvPaths = Config.GetFiles(csvDir, "CHARA*.CSV");
 			for (int i = 0; i < csvPaths.Count; i++)
 				loadCharacterDataFile(csvPaths[i].Value, csvPaths[i].Key, disp);
-#if(UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
-            csvPaths = Config.GetFiles(csvDir, "Chara*.CSV");
-            for(int i = 0; i < csvPaths.Count; i++)
-                loadCharacterDataFile(csvPaths[i].Value, csvPaths[i].Key, disp);
-            csvPaths = Config.GetFiles(csvDir, "CHARA*.csv");
-            for(int i = 0; i < csvPaths.Count; i++)
-                loadCharacterDataFile(csvPaths[i].Value, csvPaths[i].Key, disp);
-            csvPaths = Config.GetFiles(csvDir, "Chara*.csv");
-            for(int i = 0; i < csvPaths.Count; i++)
-                loadCharacterDataFile(csvPaths[i].Value, csvPaths[i].Key, disp);
-#endif
             SortCharacterTmplList();
 
             var count = CharacterTmplList.Count;
