@@ -346,7 +346,9 @@ namespace MinorShift.Emuera
 
 		public static List<KeyValuePair<string, string>> GetFiles(string rootdir, string pattern)
 		{
-			return getFiles(rootdir, rootdir, pattern, !SearchSubdirectory, SortWithFilename);
+			var ret = getFiles(rootdir, rootdir, pattern, !SearchSubdirectory, SortWithFilename);
+			UnityEngine.Debug.Log(string.Format("[GetFiles] root={0} pattern={1} count={2} subdir={3}", rootdir, pattern, ret.Count, SearchSubdirectory));
+			return ret;
 		}
 
 		private sealed class StrIgnoreCaseComparer : IComparer<string>
@@ -358,6 +360,34 @@ namespace MinorShift.Emuera
 		}
 		static readonly StrIgnoreCaseComparer ignoreCaseComparer = new StrIgnoreCaseComparer();
 
+		//Windows の Directory.GetFiles はパターンマッチが大文字小文字を無視するが、
+		//Android/Linux 系の実装では区別される端末がある。
+		//"CHARA*.CSV" 一発では "chara129.csv" 等を取りこぼし、キャラが未定義になる。
+		//かといって小文字用の再スキャンを足すと大文字小文字を無視する FS では二重読みになる
+		//（ERH 二重ロード → Lv2 で起動失敗という実害があった）。
+		//よって "*" で一括列挙し、パターン一致を自前で大文字小文字を無視して行う。
+		//これは Windows(v24) の挙動と等価で、二重ヒットは構造的に起きない。
+		private static readonly Dictionary<string, System.Text.RegularExpressions.Regex> patternRegexCache
+			= new Dictionary<string, System.Text.RegularExpressions.Regex>();
+
+		private static System.Text.RegularExpressions.Regex GetPatternRegex(string pattern)
+		{
+			lock (patternRegexCache)
+			{
+				System.Text.RegularExpressions.Regex cached;
+				if (patternRegexCache.TryGetValue(pattern, out cached))
+					return cached;
+			}
+			var re = new System.Text.RegularExpressions.Regex(
+				"^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace(@"\*", ".*").Replace(@"\?", ".") + "$",
+				System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+			lock (patternRegexCache)
+			{
+				patternRegexCache[pattern] = re;
+			}
+			return re;
+		}
+
 		//KeyValuePair<相対パス, 完全パス>のリストを返す。
 		private static List<KeyValuePair<string, string>> getFiles(string dir, string rootdir, string pattern, bool toponly, bool sort)
 		{
@@ -365,8 +395,17 @@ namespace MinorShift.Emuera
 			List<KeyValuePair<string, string>> retList = new List<KeyValuePair<string, string>>();
 			if (!toponly)
 			{//サブフォルダ内の検索
-				string[] dirList = Directory.GetDirectories(dir, "*", SearchOption.TopDirectoryOnly);
-				if (dirList.Length > 0)
+				string[] dirList = null;
+				try
+				{
+					dirList = Directory.GetDirectories(dir, "*", SearchOption.TopDirectoryOnly);
+				}
+				catch (Exception e)
+				{//端末によっては一部のディレクトリの列挙が失敗する。そこで全体を止めない。
+					UnityEngine.Debug.LogWarning(string.Format("[GetFiles] ディレクトリ列挙失敗: {0} : {1}", dir, e.Message));
+					dirList = null;
+				}
+				if (dirList != null && dirList.Length > 0)
 				{
 					if (sort)
 						Array.Sort(dirList, ignoreCaseComparer);
@@ -387,12 +426,32 @@ namespace MinorShift.Emuera
 					RelativePath += "/";//末尾が\又は/で終わるように。後でFile名を直接加算できるようにしておく
 			}
 			//filepathsは完全パスである
-			string[] filepaths = Directory.GetFiles(dir, pattern, SearchOption.TopDirectoryOnly);
-			if (sort)
-				Array.Sort(filepaths, ignoreCaseComparer);
+			//"*"で一括列挙し、パターン一致は大文字小文字を無視して自前で行う
+			//（pattern 直接指定の列挙は大小文字を区別する FS で ".erb" 等を取りこぼすため）
+			string[] filepaths = null;
+			try
+			{
+				filepaths = Directory.GetFiles(dir, "*", SearchOption.TopDirectoryOnly);
+			}
+			catch (Exception e)
+			{
+				UnityEngine.Debug.LogWarning(string.Format("[GetFiles] ファイル列挙失敗: {0} : {1}", dir, e.Message));
+				filepaths = new string[0];
+			}
+			var patternRegex = GetPatternRegex(pattern);
+			var matchedList = new List<string>(filepaths.Length);
 			for (int i = 0; i < filepaths.Length; i++)
-				if (Path.GetExtension(filepaths[i]).Length <= 4)//".erb"や".csv"であること。放置すると".erb*"等を拾う。
-					retList.Add(new KeyValuePair<string, string>(RelativePath + Path.GetFileName(filepaths[i]), filepaths[i]));
+			{
+				if (Path.GetExtension(filepaths[i]).Length > 4)//".erb"や".csv"であること。放置すると".erb*"等を拾う。
+					continue;
+				if (!patternRegex.IsMatch(Path.GetFileName(filepaths[i])))
+					continue;
+				matchedList.Add(filepaths[i]);
+			}
+			if (sort)
+				matchedList.Sort(ignoreCaseComparer);
+			for (int i = 0; i < matchedList.Count; i++)
+				retList.Add(new KeyValuePair<string, string>(RelativePath + Path.GetFileName(matchedList[i]), matchedList[i]));
 			return retList;
 		}
 		
