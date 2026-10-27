@@ -14,7 +14,9 @@ internal static class SpriteManager
     static Queue<Action> mainThreadActions = new Queue<Action>();
     static object mainThreadLock = new object();
 
-    static bool debug = true;
+    // 逐图解码日志在 eraTW 这种万级资源下会灌满 logcat，既占内存又拖慢加载。
+    // 只在需要排查时手动改成 true。
+    static bool debug = false;
 
     static void DebugLog(string msg)
     {
@@ -43,6 +45,9 @@ internal static class SpriteManager
     }
     internal class TextureInfo : IDisposable
     {
+        // 纹理空闲多久就丢掉 CPU 侧的像素副本（秒）。纹理本身留着还能继续画。
+        const float kPixelCacheIdle = 20.0f;
+
         internal TextureInfo(string b, Texture2D tex)
         {
             imagename = b;
@@ -50,9 +55,10 @@ internal static class SpriteManager
             _w = tex.width;
             _h = tex.height;
             pasttime = Time.unscaledTime + kPastTime;
-            DebugLog($"TextureInfo.ctor: name={b} w={_w}h={_h} — GetPixels32");
-            pixelCache = texture.GetPixels32();
-            DebugLog($"TextureInfo.ctor: done, pixelCache.Length={pixelCache.Length}");
+            // 这里不再做 GetPixels32()。
+            // v24 的 ConstImage 只持有一份 Bitmap，绘制时直接从这一份取像素；
+            // 本实现原先额外常驻一份 Color32[]，等于把整包资源复制两份，
+            // 万级资源（eraTW）直接翻倍。改为按需构建，见 EnsurePixelCache()。
         }
         internal SpriteInfo GetSprite(ASprite src)
         {
@@ -106,20 +112,63 @@ internal static class SpriteManager
 
         internal UnityEngine.Color32[] pixelCache = null;
         internal bool pixelCacheDirty = false;
+        float pixelCachePasttime = 0f;
+
+        internal bool HasPixelCache { get { return pixelCache != null; } }
+        internal bool PixelCacheDirty { get { return pixelCacheDirty; } }
+        internal bool PixelCacheExpired(float now)
+        {
+            return pixelCache != null && now > pixelCachePasttime;
+        }
+
+        /// <summary>
+        /// 按需构建 CPU 侧像素副本。首次访问时才 GetPixels32()。
+        /// Emuera 的绘图指令（GDRAWCIMG 等）跑在后台线程，而 GetPixels32 只能主线程调用，
+        /// 所以非主线程时切到主线程执行（与 GetTextureInfo 同一套处理方式）。
+        /// </summary>
+        internal UnityEngine.Color32[] EnsurePixelCache()
+        {
+            if (pixelCache != null)
+                return pixelCache;
+            if (texture == null)
+                return null;
+            if (!SpriteManager.IsMainThread())
+            {
+                UnityEngine.Color32[] result = null;
+                var done = new System.Threading.ManualResetEvent(false);
+                SpriteManager.RunOnMainThread(() =>
+                {
+                    result = EnsurePixelCache();
+                    done.Set();
+                });
+                done.WaitOne();
+                done.Close();
+                return result;
+            }
+            pixelCache = texture.GetPixels32();
+            pixelCachePasttime = Time.unscaledTime + kPixelCacheIdle;
+            return pixelCache;
+        }
 
         internal UnityEngine.Color32 GetPixelCached(int x, int y)
         {
-            return pixelCache[y * _w + x];
+            var cache = EnsurePixelCache();
+            if (cache == null || x < 0 || y < 0 || x >= _w || y >= _h)
+                return default(UnityEngine.Color32);
+            return cache[y * _w + x];
         }
 
         internal UnityEngine.Color32[] GetPixelsCached()
         {
-            return pixelCache;
+            return EnsurePixelCache();
         }
 
         internal void SetPixelCached(int x, int y, UnityEngine.Color32 c)
         {
-            pixelCache[y * _w + x] = c;
+            var cache = EnsurePixelCache();
+            if (cache == null || x < 0 || y < 0 || x >= _w || y >= _h)
+                return;
+            cache[y * _w + x] = c;
             pixelCacheDirty = true;
         }
 
@@ -131,6 +180,13 @@ internal static class SpriteManager
                 texture.Apply();
                 pixelCacheDirty = false;
             }
+        }
+
+        internal void ReleasePixelCache()
+        {
+            if (pixelCacheDirty)
+                return;
+            pixelCache = null;
         }
     }
     class CallbackInfo
@@ -161,25 +217,18 @@ internal static class SpriteManager
         GenericUtils.StartCoroutine(Update());
         GenericUtils.StartCoroutine(UpdateRenderOP());
 #else
+        // 纹理驻留时间：设备内存越小，回收越激进。
+        // 原先 <=4096/<=8192/>8192 三档给的是 120/300/600 秒，等于加载后
+        // 好几分钟一张都不回收，峰值必须扛住全量资源。手机上按 60/120/300 秒走。
         var memorysize = SystemInfo.systemMemorySize;
-        if(memorysize <= 4096)
-        {
-            kPastTime = 120.0f;
-            GenericUtils.StartCoroutine(Update());
-            GenericUtils.StartCoroutine(UpdateRenderOP());
-        }
+        if(memorysize <= 6144)
+            kPastTime = 60.0f;
         else if(memorysize <= 8192)
-        {
-            kPastTime = 300.0f;
-            GenericUtils.StartCoroutine(Update());
-            GenericUtils.StartCoroutine(UpdateRenderOP());
-        }
+            kPastTime = 120.0f;
         else
-        {
-            kPastTime = 600.0f;
-            GenericUtils.StartCoroutine(Update());
-            GenericUtils.StartCoroutine(UpdateRenderOP());
-        }
+            kPastTime = 300.0f;
+        GenericUtils.StartCoroutine(Update());
+        GenericUtils.StartCoroutine(UpdateRenderOP());
 #endif
     }
     static IEnumerator ProcessMainThreadActions()
@@ -378,16 +427,16 @@ internal static class SpriteManager
 
         if (extname == "webp")
         {
-            Debug.Log($"[SpriteMgr] GetTextureInfoInternal: webp file={filename} bytes={content.Length}");
+            DebugLog($"GetTextureInfoInternal: webp file={filename} bytes={content.Length}");
             var webpTex = Texture2DExt.CreateTexture2DFromWebP(content, false, false, out Error lError);
             if(webpTex == null || lError != Error.Success)
             {
                 Debug.LogError($"[SpriteMgr] {filename} webp decode FAILED err={lError}");
                 return null;
             }
-            Debug.Log($"[SpriteMgr] GetTextureInfoInternal: webp OK {webpTex.width}x{webpTex.height} fmt={webpTex.format}");
+            DebugLog($"GetTextureInfoInternal: webp OK {webpTex.width}x{webpTex.height} fmt={webpTex.format}");
             var tex = MakeReadable(webpTex);
-            Debug.Log($"[SpriteMgr] GetTextureInfoInternal: readable copy {tex.width}x{tex.height}, creating TextureInfo");
+            DebugLog($"GetTextureInfoInternal: readable copy {tex.width}x{tex.height}, creating TextureInfo");
             ti = new TextureInfo(name, tex);
             texture_dict.Add(name, ti);
         }
@@ -496,16 +545,16 @@ internal static class SpriteManager
 
             if (extname == "webp")
             {
-                Debug.Log($"[SpriteMgr] Loading: webp file={baseimage.path} bytes={content.Length}");
+                DebugLog($"Loading: webp file={baseimage.path} bytes={content.Length}");
                 var webpTex = Texture2DExt.CreateTexture2DFromWebP(content, false, false, out Error lError);
                 if(webpTex == null || lError != Error.Success)
                 {
                     Debug.LogError($"[SpriteMgr] {baseimage.path} webp decode FAILED err={lError}");
                     yield break;
                 }
-                Debug.Log($"[SpriteMgr] Loading: webp OK {webpTex.width}x{webpTex.height} fmt={webpTex.format}");
+                DebugLog($"Loading: webp OK {webpTex.width}x{webpTex.height} fmt={webpTex.format}");
                 var tex = MakeReadable(webpTex);
-                Debug.Log($"[SpriteMgr] Loading: readable copy {tex.width}x{tex.height}, creating TextureInfo");
+                DebugLog($"Loading: readable copy {tex.width}x{tex.height}, creating TextureInfo");
                 ti = new TextureInfo(baseimage.filename, tex);
                 texture_dict.Add(baseimage.filename, ti);
 
@@ -572,7 +621,7 @@ internal static class SpriteManager
         {
             do
             {
-                yield return new WaitForSeconds(15.0f);
+                yield return new WaitForSeconds(5.0f);
             } while(texture_dict.Count == 0);
 
             var now = Time.unscaledTime;
@@ -582,6 +631,10 @@ internal static class SpriteManager
             while(iter.MoveNext())
             {
                 var ti = iter.Current;
+                // CPU 像素副本比纹理更贵（同样大小再复制一份），空闲一会儿就先丢掉，
+                // 纹理留着还能继续画，下次要读像素时再重建。
+                if(ti.PixelCacheExpired(now))
+                    ti.ReleasePixelCache();
                 if(ti.refcount == 0 && now > ti.pasttime)
                 {
                     if(evictList == null)

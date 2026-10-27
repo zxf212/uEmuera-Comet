@@ -51,23 +51,50 @@ namespace uEmuera.Drawing
         public BitmapTexture(string path)
             :base(path)
         {
-            textureinfo = SpriteManager.GetTextureInfo(filename, path);
-            if(textureinfo == null)
+            // 对齐 v24：构造阶段只登记尺寸，不做像素解码。
+            //
+            // v24 的 ConstImage 在 CreateFromCsv 里 new Bitmap(filepath)，一份像素；
+            // 本实现原先在这里调用 SpriteManager.GetTextureInfo()，等于在 LoadContents
+            // 阶段把 resources 下**全部**图片解码成 Texture2D 常驻内存。eraTW-KAGEROU
+            // 这种万级资源的游戏在手机上必然被 lowmemorykiller 杀掉。
+            //
+            // 现在只读文件头拿宽高（ImageHeader 不分配像素内存），真正的解码推迟到
+            // 第一次需要绘制（SpriteManager.GetSprite / texture 属性）时。
+            int w, h;
+            if (uEmuera.ImageHeader.TryGetSize(path, out w, out h))
+            {
+                size.Width = w;
+                size.Height = h;
+                return;
+            }
+            // 文件头解析失败（未知格式等）才退回解码，保证行为兜底。
+            var ti = SpriteManager.GetTextureInfo(filename, path);
+            if(ti == null)
             {
                 Debug.LogWarning($"[LoadContents][BitmapTexture] GetTextureInfo failed: {path}");
                 return;
             }
             // 本构造函数运行在 Emuera 的后台线程（LoadContents 调用链）上。
             // texture.width/height 的 getter 最终是 Unity 的 GetDataWidth/GetDataHeight，
-            // 带主线程检查，在 worker 上会抛 "can only be called from the main thread"，
-            // 导致整个资源 CSV 加载失败。这里改读 TextureInfo 在主线程构造时缓存下来的 _w/_h。
-            size.Width = textureinfo.width;
-            size.Height = textureinfo.height;
-            Debug.Log($"[LoadContents][BitmapTexture] loaded: {path} {size.Width}x{size.Height} (cached)");
+            // 带主线程检查，在 worker 上会抛 "can only be called from the main thread"。
+            // 这里读 TextureInfo 在主线程构造时缓存下来的 _w/_h。
+            size.Width = ti.width;
+            size.Height = ti.height;
         }
         public UnityEngine.Texture2D texture
         {
-            get { return textureinfo.texture; }
+            get
+            {
+                var ti = EnsureTextureInfo();
+                return ti == null ? null : ti.texture;
+            }
+        }
+        /// <summary>首次访问纹理时才真正解码（会切到主线程）。</summary>
+        internal SpriteManager.TextureInfo EnsureTextureInfo()
+        {
+            if (textureinfo == null)
+                textureinfo = SpriteManager.GetTextureInfo(filename, path);
+            return textureinfo;
         }
         SpriteManager.TextureInfo textureinfo = null;
     }

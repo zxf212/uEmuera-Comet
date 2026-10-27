@@ -311,11 +311,19 @@ namespace uEmuera
                     if(imagepath == null)
                         continue;
 
-                    var ti = SpriteManager.GetTextureInfo(name, imagepath);
-                    if(ti == null)
-                        continue;
+                    // 只读文件头拿宽高，不走解码。原先在这里调 GetTextureInfo 会把
+                    // resources 下全部图片解码一遍，等于给启动期再叠一份全量内存。
+                    int iw = 0, ih = 0;
+                    if (!ImageHeader.TryGetSize(imagepath, out iw, out ih))
+                    {
+                        var ti = SpriteManager.GetTextureInfo(name, imagepath);
+                        if(ti == null)
+                            continue;
+                        iw = ti.width;
+                        ih = ti.height;
+                    }
                     line = string.Format("{0},{1},0,0,{2},{3}",
-                        tokens[0], tokens[1], ti.width, ti.height);
+                        tokens[0], tokens[1], iw, ih);
                     newlines.Add(line);
                     fixcount += 1;
                 }
