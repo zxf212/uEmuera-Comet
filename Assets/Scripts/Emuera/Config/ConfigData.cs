@@ -432,13 +432,25 @@ static ConfigData() { }
 				fixedConfigPath = Program.CsvDir + "fixed.config";
 
 			loadConfig(defaultConfigPath, false);
-			loadConfig(configPath, false);
+			bool userConfigLoaded = File.Exists(configPath) && loadConfig(configPath, false);
 			loadConfig(fixedConfigPath, true);
-			
+
+			// 安卓兜底：emuera.config 缺失或读取失败时，「サブディレクトリを検索する」
+			// 会保持 v24/V15 的默认值 false，于是只扫描 ERB 顶层目录。
+			// 而 eraTW 这类游戏把资源全放在子目录里（本机这份：顶层 ERH 3 / 全部 94，
+			// 顶层 ERB 23 / 全部 3903），顶层扫描等于只读到 3 个 ERH + 23 个 ERB，
+			// 其余 3880 个 ERB 里的 #FUNCTION 与 91 个 ERH 里的 #DIM SAVEDATA 全部变成
+			// 「解釈できない識別子」，ERB 必然编译失败并直接退出。
+			// 手机端玩家没法方便地编辑 emuera.config，所以只在"读不到用户配置"时
+			// 把子目录搜索打开。只要 emuera.config 存在且能解析，行为与 v24 完全一致。
+			if (!userConfigLoaded)
+				GetItem(ConfigCode.SearchSubdirectory).SetValue(true);
+
 			Config.SetConfig(this);
 			bool needSave = false;
 			if (!File.Exists(configPath))
 				needSave = true;
+			UnityEngine.Debug.Log($"[Config] path={configPath} exists={File.Exists(configPath)} loaded={userConfigLoaded} SearchSubdirectory={Config.SearchSubdirectory} ExeDir={Program.ExeDir}");
 			if (Config.CheckUpdate())
 			{
 				GetItem(ConfigCode.LastKey).SetValue(Config.LastKey);
