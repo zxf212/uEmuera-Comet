@@ -112,7 +112,7 @@ CHANGELOG.md
 ## 许可与声明
 
 - 基于 **xerysherry/uEmuera v0.2.9d**（**Apache-2.0**）修改，上游为 emuera1824v15。作者：**xerysherry**；Emuera 解释器作者：**MinorShift** 等。
-- Apache-2.0 已授予修改与再分发权利。Emuera 原版授权（`Assets/StreamingAssets/license@emuera`）要求：不得虚示来源、修改必须明示、不得删除声明 —— 本版本按此三项执行。
-- **禁止商用**：仅限个人学习、研究与娱乐使用，禁止打包售卖或借此盈利。
+- **允许商用。** Apache-2.0 与 Emuera 原版许可（`Assets/StreamingAssets/license@emuera`）均明确允许将本软件用于任何目的，**包括商业应用**。
+- 但须遵守 Emuera 原版许可的三项条件：① 不得虚示来源、不得声称原创；② 修改过源码必须明示；③ 不得删除或改动许可声明。本版本按此三项执行。
 - 本修改与原作者无关，使用本版本导致的任何问题由使用者自行承担。
 - 若权利人认为本版本不妥，请提 Issue，我会立即处理。
