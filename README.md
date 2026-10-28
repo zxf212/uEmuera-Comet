@@ -9,7 +9,7 @@
 
 Android 上运行 **Emuera / eramaker 脚本（era 系列游戏）** 的运行时，基于 Unity + IL2CPP。
 
-本项目是 [xerysherry/uEmuera](https://github.com/xerysherry/uEmuera) **v0.2.9d** 的第三方修改版，引擎内核为 **Emuera 1824v15**，修复时对照 **Emuera 1824 + v24** 源码。
+本项目主要解决手机端的**图片/资源显示异常**（资源加载失败、图片变文本、启动即退出、被系统 OOM 杀掉），是 [xerysherry/uEmuera](https://github.com/xerysherry/uEmuera) **v0.2.9d** 的第三方修改版，引擎内核为 **Emuera 1824v15**，修复时对照 **Emuera 1824 + v24** 源码。
 
 > ### ⚠️ 关于源码
 > **0.1 版本的源码已丢失。** 原 Unity 工程已从磁盘删除，无 git、无备份，IL2CPP 产物无法反编译出方法体。
