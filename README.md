@@ -32,7 +32,14 @@ Android 上运行 **Emuera / eramaker 脚本（era 系列游戏）** 的运行�
 
 ## 下载
 
-**[uEmuera-Comet-0.2.apk](https://github.com/zxf212/uEmuera-Comet/releases/download/v0.2/uEmuera-Comet-0.2.apk)** · 全部版本见 [Releases](../../releases)
+| 版本 | 状态 | 说明 | 下载 |
+|---|---|---|---|
+| **0.2** | ✅ 当前版本，推荐 | 33.6 MB，Release，0.2 / 17 | **[uEmuera-Comet-0.2.apk](https://github.com/zxf212/uEmuera-Comet/releases/download/v0.2/uEmuera-Comet-0.2.apk)** |
+| 0.1 | ⚠️ **旧版存档，不再更新** | 66.3 MB，Development Build，源码已丢失，含下方全部已知问题 | [uEmuera-Comet-0.1.apk](https://github.com/zxf212/uEmuera-Comet/releases/download/v0.1-legacy/uEmuera-Comet-0.1.apk) |
+
+> 0.1 仅作历史存档，**请勿使用**：资源加载失败、启动即退出、OOM、角色未定义等问题 0.2 已全部修复。
+
+### 0.2 安装包
 
 | 项 | 值 |
 |---|---|
@@ -42,6 +49,16 @@ Android 上运行 **Emuera / eramaker 脚本（era 系列游戏）** 的运行�
 | MD5 | `fefc29abdd8bf7421bc4c1c4ba587d63` |
 | 构建 | IL2CPP，ARMv7 + ARM64，Release |
 | 实测 | MuMu 12（Android 12，6 GB）+ Android 真机；eraTW 系两个发行包 |
+
+### 0.1 安装包（存档）
+
+| 项 | 值 |
+|---|---|
+| 版本 | 0.1（versionCode 16） |
+| 体积 | 69,484,266 字节（66.3 MB） |
+| MD5 | `19bf39aa6cadff3ed40afc8b5ad2cbe9` |
+| 类型 | Development Build（`android:debuggable=true`） |
+| 标签 | `v0.1-legacy` |
 
 ## 0.2 做了什么
 
