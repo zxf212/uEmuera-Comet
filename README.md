@@ -32,12 +32,14 @@ Android 上运行 **Emuera / eramaker 脚本（era 系列游戏）** 的运行�
 
 ## 下载
 
-APK 见 [Releases](../../releases)（若为空，用下文的「构建」自行产出）。
+**[uEmuera-Comet-0.2.apk](https://github.com/zxf212/uEmuera-Comet/releases/download/v0.2/uEmuera-Comet-0.2.apk)** · 全部版本见 [Releases](../../releases)
 
 | 项 | 值 |
 |---|---|
-| 版本 | 0.2 |
+| 版本 | 0.2（versionCode 17） |
+| 包名 | `com.uemuera.comet` |
 | 体积 | 33.6 MB（0.1 为 66.3 MB 的 Development Build） |
+| MD5 | `fefc29abdd8bf7421bc4c1c4ba587d63` |
 | 构建 | IL2CPP，ARMv7 + ARM64，Release |
 | 实测 | MuMu 12（Android 12，6 GB）+ Android 真机；eraTW 系两个发行包 |
 
